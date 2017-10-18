@@ -5,108 +5,56 @@ Created on Fri Oct 06 13:46:31 2017
 @author: Matthew Gray
 version 1.2 attempts to fit the entire 3d space instead of taking a 2d plot as was done earlier
 """
-from mpl_toolkits.mplot3d import Axes3D
+#from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib as mpl
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
+#from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 from scipy.optimize import curve_fit
-import random
-
 import fitting as fun
 
 
 N = 200
-ranges = 20
 
 A = 1
 theta_s = 0
-theta_g = -0 * np.pi
+theta_g = 0 * np.pi
 sigma_y = 5
 sigma_x = 5
 x0 = 0
 y0 = 0
+C = 1
+freq = 50
 
-a, b, c = fun.rotation_coefficients(theta_g, sigma_x, sigma_y)
-endpoint = True
-X = np.linspace(-ranges, ranges, N, endpoint)
-Y = np.linspace(-ranges, ranges, N, endpoint)
-X, Y = np.meshgrid(X, Y)
+grid_data = fun.create_cloud(N, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, C, 0)
 
 
-gaussian = A*np.exp(-(a*(X-x0)**2 + 2*b*(X-x0)*(Y-y0) + c*(Y-y0)**2))
-wave = 1 + np.sin(X*np.cos(theta_s) + Y*np.sin(theta_s))
+grid_data = fun.bandpass(grid_data, freq)
 
-Z = 0.5*gaussian*wave
+linear_data = fun.grid_to_linear(grid_data)
 
- 
-data1 = np.array([X[0][0], Y[0][0], Z[0][0]])
-
-data2 = np.array([X, Y, Z])
-
-for i in range(0, len(data2[2])):
-    for j in range(0, len(data2[2][i])):
-        data2[2][i][j] = data2[2][i][j] + 10*(random.random() - 0.5)
-
-# =============================================================================
-
-dt = abs(X[0][1] - X[0][0])
-data1 = np.array([X[0][0], Y[0][0], Z[0][0]])
- 
-fourier_data = np.fft.fft2(data2[2])
-fourier_data = fun.band_pass(fourier_data, 50, dt)
-data2[2] = np.fft.ifft2(fourier_data)
-
-for i in range(1,len(X)):
-    for j in range(1,len(X[0])):
-       data1 = np.vstack((data1, np.array([data2[0][i][j], data2[1][i][j], data2[2][i][j]])))
-
-# =============================================================================
 
 label = 6
 mpl.rc('xtick', labelsize=label) 
 mpl.rc('ytick', labelsize=label)
 fig = plt.figure()
-ax = fig.add_subplot(221, projection='3d')
-ax.plot_surface(X, Y, Z, cmap=cm.coolwarm,
+ax = fig.add_subplot(121, projection='3d')
+ax.plot_surface(grid_data[0], grid_data[1], grid_data[2], cmap=cm.coolwarm,
                        linewidth=0, antialiased=True)
-                       
-ax.set_xlim([-ranges, ranges])
-ax.set_ylim([-ranges, ranges])
-ax.set_title('created fringe')
 
-
-ax = fig.add_subplot(222, projection='3d')
-ax.plot_surface(data2[0], data2[1], data2[2], cmap=cm.coolwarm,
-                       linewidth=0, antialiased=True)
-                       
-ax.set_xlim([-ranges, ranges])
-ax.set_ylim([-ranges, ranges])
 
 ax.set_title('add noise')
-mpl.rc('xtick', labelsize=label) 
-mpl.rc('ytick', labelsize=label)
 
 #guess = (theta, sin_phi, A, sigma_x, sigma_y, x0, y0)
-ax = fig.add_subplot(223, projection='3d')
-popt, pcov = curve_fit(fun.function_to_fit_linear_packing, data1[:,:2], data1[:,2])
-ax.plot_surface(data2[0], data2[1], fun.function_to_fit_grid_packing(data2[0:2], *popt), cmap=cm.coolwarm,
+ax = fig.add_subplot(122, projection='3d')
+popt, pcov = curve_fit(fun.function_to_fit_linear_packing, linear_data[:,:2], linear_data[:,2])
+ax.plot_surface(grid_data[0], grid_data[1], fun.function_to_fit_grid_packing(grid_data[0:2], *popt), cmap=cm.coolwarm,
                        linewidth=0, antialiased=True)
-ax.set_xlim([-ranges, ranges])
-ax.set_ylim([-ranges, ranges])
-ax.set_title('fit')
-mpl.rc('xtick', labelsize=label) 
-mpl.rc('ytick', labelsize=label)
 
-ax = fig.add_subplot(224, projection='3d')
-ax.plot_surface(data2[0], data2[1], Z - fun.function_to_fit_grid_packing(data2[0:2], *popt), cmap=cm.coolwarm,
-                       linewidth=0, antialiased=True)
-ax.set_xlim([-ranges, ranges])
-ax.set_ylim([-ranges, ranges])
-ax.set_title('difference')
-mpl.rc('xtick', labelsize=label) 
-mpl.rc('ytick', labelsize=label)
+ax.set_title('fit')
+
+
 fig.subplots_adjust(hspace=0.6)
 
 plt.savefig('3d-fit.pdf')
