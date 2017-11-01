@@ -12,17 +12,17 @@ from matplotlib import cm
 import matplotlib as mpl
 
 
-def function_to_fit_linear_packing(data, k, theta, A, sigma, x0, y0, C):
+def function_to_fit_linear_packing(data, k, theta, A, sigma, phi0, C):
         
     gaussian = A*np.exp(-(data[:,0]**2 + data[:,1]**2)/(2*sigma**2))
-    wave = 0.5*(1 + C*np.sin(k*((data[:,0]-x0)*np.cos(theta) + (data[:,1] - y0)*np.sin(theta))))
+    wave = 0.5*(1 + C*np.sin(k*((data[:,0])*np.cos(theta) + (data[:,1])*np.sin(theta)) + phi0))
     curve = gaussian*wave
     return curve 
     
-def function_to_fit_grid_packing(data, k, theta, A, sigma, x0, y0, C):
+def function_to_fit_grid_packing(data, k, theta, A, sigma, phi0, C):
     
     gaussian = A*np.exp(-(data[0]**2 + data[1]**2)/(2*sigma**2))
-    wave = 0.5*(1 + C*np.sin(k*((data[0]-x0)*np.cos(theta) + (data[1] - y0)*np.sin(theta))))
+    wave = 0.5*(1 + C*np.sin(k*((data[0])*np.cos(theta) + (data[1])*np.sin(theta)) + phi0))
     curve = gaussian*wave
     return curve
     
@@ -85,7 +85,7 @@ def FT_plot(data):
     
     
 
-def create_cloud(N, k, theta, A, sigma, x0, y0, C, noise_scale):
+def create_cloud(N, k, theta, A, sigma, phi0, C, noise_scale):
     
     ranges = 20
     
@@ -96,7 +96,7 @@ def create_cloud(N, k, theta, A, sigma, x0, y0, C, noise_scale):
     
     data = np.array([X, Y])
     
-    Z = function_to_fit_grid_packing(data, k, theta, A, sigma, x0, y0, C)
+    Z = function_to_fit_grid_packing(data, k, theta, A, sigma, phi0, C)
     
     data = np.array([data[0], data[1], Z])
     
