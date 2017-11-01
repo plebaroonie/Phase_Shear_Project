@@ -6,29 +6,23 @@ Created on Wed Oct 18 14:05:15 2017
 """
 import numpy as np
 import random
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+from matplotlib import cm
+import matplotlib as mpl
 
-def rotation_coefficients(theta, sigma_x, sigma_y):
-    a = np.cos(theta)**2/(2*sigma_x**2) + np.sin(theta)**2/(2*sigma_y**2)
-    b = np.sin(2*theta)/(4*sigma_x**2) - np.sin(2*theta)/(4*sigma_y**2)
-    c = np.sin(theta)**2/(2*sigma_x**2) + np.cos(theta)**2/(2*sigma_y**2)
-    
-    return a,b,c
 
-def function_to_fit_linear_packing(data, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, C):
-    
-    a, b, c = rotation_coefficients(theta_g, sigma_x, sigma_y)
-    
-    gaussian = A*np.exp(-(a*(data[:,0])**2 + 2*b*(data[:,0])*(data[:,1]) + c*(data[:,1])**2))
-    wave = 0.5*(1 + C*np.sin((data[:,0]-x0)*np.cos(theta_s) + (data[:,1] - y0)*np.sin(theta_s)))
+def function_to_fit_linear_packing(data, k, theta, A, sigma, x0, y0, C):
+        
+    gaussian = A*np.exp(-(data[:,0]**2 + data[:,1]**2)/(2*sigma**2))
+    wave = 0.5*(1 + C*np.sin(k*((data[:,0]-x0)*np.cos(theta) + (data[:,1] - y0)*np.sin(theta))))
     curve = gaussian*wave
     return curve 
     
-def function_to_fit_grid_packing(data, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, C):
+def function_to_fit_grid_packing(data, k, theta, A, sigma, x0, y0, C):
     
-    a, b, c = rotation_coefficients(theta_g, sigma_x, sigma_y)
-    
-    gaussian = A*np.exp(-(a*(data[0])**2 + 2*b*(data[0])*(data[1]) + c*(data[1])**2))
-    wave = 0.5*(1 + C*np.sin((data[0]-x0)*np.cos(theta_s) + (data[1] - y0)*np.sin(theta_s)))
+    gaussian = A*np.exp(-(data[0]**2 + data[1]**2)/(2*sigma**2))
+    wave = 0.5*(1 + C*np.sin(k*((data[0]-x0)*np.cos(theta) + (data[1] - y0)*np.sin(theta))))
     curve = gaussian*wave
     return curve
     
@@ -56,7 +50,42 @@ def band_pass(input_data, frequency):
 
     return output_data
 
-def create_cloud(N, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, c, noise_scale):
+def FT_plot(data):
+    
+    fourier_data = np.fft.fft2(data[2])
+    df = 1.0 / abs((data[0][0][1] - data[0][0][0]))
+    length = int(len(data[0]) / 2)
+    packed_data = fourier_data
+    
+    for i in range(0,length):
+        for j in range(0, length):
+            packed_data[i][j] = fourier_data[length + i][length + j]
+    for i in range(0,length):
+        for j in range(0, length):
+            packed_data[i][j] = fourier_data[i][j]
+    
+    freq_X = np.linspace(-df*length, df*length, 2*length, True)
+    freq_Y = freq_X
+    freq_X, freq_Y = np.meshgrid(freq_X, freq_Y)
+    
+    print(len(freq_X), len(packed_data))
+    label = 6
+    mpl.rc('xtick', labelsize=label) 
+    mpl.rc('ytick', labelsize=label)
+    fig = plt.figure()
+    ax = fig.add_subplot(121, projection='3d')
+    ax.plot_surface(freq_X, freq_Y, packed_data.imag, cmap=cm.coolwarm,
+                           linewidth=0, antialiased=True)
+    
+    
+    ax.set_title('data')
+    plt.show()
+        
+    
+    
+    
+
+def create_cloud(N, k, theta, A, sigma, x0, y0, C, noise_scale):
     
     ranges = 20
     
@@ -66,7 +95,9 @@ def create_cloud(N, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, c, noise_scal
     X, Y = np.meshgrid(X, Y)
     
     data = np.array([X, Y])
-    Z = function_to_fit_grid_packing(data, theta_g, theta_s, A, sigma_x, sigma_y, x0, y0, c)
+    
+    Z = function_to_fit_grid_packing(data, k, theta, A, sigma, x0, y0, C)
+    
     data = np.array([data[0], data[1], Z])
     
     if not noise_scale == 0:
